@@ -328,6 +328,24 @@ class TestSchemaUnmarshal(object):
         assert schema.unmarshal('string') == 'string'
 
 
+    @pytest.mark.parametrize('value', [
+        {'additional': 1},
+        {'foo': 'bar', 'bar': 'foo'},  # Example in https://github.com/p1c2u/openapi-core/issues/67#issuecomment-463656001
+        {'additional': {
+            'bar': 1
+        } }
+        ])
+    def test_schema_free_form_object(self, value):
+        schema = Schema('object', additional_properties=True)
+
+        # same as TestSchemaValidate::test_object_additional_properties
+        obj = Model(value)
+        schema.validate(obj)
+
+        result = schema.unmarshal(value)
+        assert result.__dict__ == value
+    
+
 class TestSchemaValidate(object):
 
     @pytest.mark.parametrize('schema_type', [
@@ -887,24 +905,27 @@ class TestSchemaValidate(object):
         assert result == value
 
     @pytest.mark.parametrize('value', [Model({'additional': 1}), ])
-    def test_object_additional_propetries(self, value):
+    def test_object_additional_properties(self, value):
         schema = Schema('object')
 
-        schema.validate(value)
+        result = schema.validate(value)
+        assert result == value
 
     @pytest.mark.parametrize('value', [Model({'additional': 1}), ])
-    def test_object_additional_propetries_false(self, value):
+    def test_object_additional_properties_false(self, value):
         schema = Schema('object', additional_properties=False)
 
         with pytest.raises(UndefinedSchemaProperty):
             schema.validate(value)
 
     @pytest.mark.parametrize('value', [Model({'additional': 1}), ])
-    def test_object_additional_propetries_object(self, value):
+    def test_object_additional_properties_object(self, value):
         additional_properties = Schema('integer')
         schema = Schema('object', additional_properties=additional_properties)
 
-        schema.validate(value)
+        result = schema.validate(value)
+        assert result == value
+
 
     @pytest.mark.parametrize('value', [[], ])
     def test_list_min_items_invalid_schema(self, value):
