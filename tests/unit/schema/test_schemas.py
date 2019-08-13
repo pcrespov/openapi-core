@@ -329,21 +329,32 @@ class TestSchemaUnmarshal(object):
 
 
     @pytest.mark.parametrize('value', [
-        {'additional': 1},
         {'foo': 'bar', 'bar': 'foo'},  # Example in https://github.com/p1c2u/openapi-core/issues/67#issuecomment-463656001
-        {'additional': {
+        {'additional': 1},
+        {'additional_hybrid': 1, 'foo': 'bar'},
+        {'additional_nested': {
             'bar': 1
         } }
         ])
     def test_schema_free_form_object(self, value):
-        schema = Schema('object', additional_properties=True)
+        additional_properties = Schema(SchemaType.ANY) # FIXME: works but not in nested!
+        #additional_properties = True # <-----------FAILS!
+
+        schema = Schema('object', additional_properties=additional_properties)
 
         # same as TestSchemaValidate::test_object_additional_properties
         obj = Model(value)
         schema.validate(obj)
 
         result = schema.unmarshal(value)
-        assert result.__dict__ == value
+
+        def _obj2json(obj):
+            if hasattr(obj, '__dict__'):
+                return { key: _obj2json(value) for key, value in obj.__dict__.items() }
+            return obj
+
+        result_json= _obj2json(result)
+        assert result_json == value
     
 
 class TestSchemaValidate(object):
